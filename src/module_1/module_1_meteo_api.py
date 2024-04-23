@@ -35,7 +35,7 @@ def get_data_meteo_api(longitude: float, latitude: float, start_date: str, end_d
         "start_date": start_date,
         "end_date": end_date,
         "models": "CMCC_CM2_VHR4,FGOALS_f3_H,HiRAM_SIT_HR,MRI_AGCM3_2_S,EC_Earth3P_HR,MPI_ESM1_2_XR,NICAM16_8S",#NICAM16_85
-        "daily":VARIABLES,
+        "daily": VARIABLES,
     }
     #url = API_URL + urlencode(params, safe=",")
     #print("URL:", url) 
@@ -44,10 +44,8 @@ def get_data_meteo_api(longitude: float, latitude: float, start_date: str, end_d
 
 
 def _request_with_cooloff(
-        url: str, headers: Dict[str,any], num_attempts: int,  payload: Dict[str, any] = None
-    ):
-
-       
+        url: str, headers: Dict[str, any], num_attempts: int,  payload: Dict[str, any] = None
+    ):       
        
        
     cooloff=1
@@ -57,20 +55,18 @@ def _request_with_cooloff(
                 response= requests.get(url,headers=headers)
                 #print("ha llegado")
                 #print(response)
-
             else:
                 response=requests.post(url, headers=headers, json=payload)
             response.raise_for_status()
-
-        
+ 
         except requests.exceptions.ConnectionError as e:
-            logger.info("API refusede coonnection")
+            logger.info("API refused coonnection")
             logger.warning(e)
-            if call_count != (num_attempts-1):
+            if call_count != (num_attempts - 1):
                 time.sleep(cooloff)
                 cooloff*=2
                 continue
-            else:
+            else: 
                 raise
         
 
@@ -91,17 +87,15 @@ def _request_with_cooloff(
                 continue
             else:
                 raise
-
-        
-        
+ 
         return response
     
 
 def request_with_cooloff(
     url: str,
     headers: Dict[str, any],
-    payload: Dict[str, any]= None,
-    num_attempts: int =10,
+    payload: Dict[str, any] = None,
+    num_attempts: int = 10,
 ) -> Dict[Any, Any]:
     return json.loads(
         _request_with_cooloff(
@@ -115,7 +109,7 @@ def request_with_cooloff(
 def compute_variable_mean_and_std(data: pd.DataFrame):
 
 
-    calculate_ts= data [["City", "time"]].copy()
+    calculate_ts= data [["city", "time"]].copy()
     for variable in VARIABLES.split(","):
         idxs = [col for col in data.columns if col.startswith(variable)]
         calculate_ts[f"{variable}_mean"] = data[idxs].mean(axis=1)
@@ -124,9 +118,6 @@ def compute_variable_mean_and_std(data: pd.DataFrame):
 
 
 def plot_timeseries(data: pd.DataFrame):
-
-
-
 
     rows=3
     cols=1
@@ -138,15 +129,16 @@ def plot_timeseries(data: pd.DataFrame):
         city_data = data.loc[lambda x: x.city == city, :]
         print(city_data.head())
         for i, variable in enumerate(VARIABLES.split(",")):
+            city_data = city_data.copy()
             city_data["mid_"] = city_data[f"{variable}_mean"]
-            city_data["uppper_"] = (
+            city_data["upper_"] = (
                 city_data[f"{variable}_mean"] + city_data[f"{variable}_std"]
             )
-            city_data["lower"] = (
+            city_data["lower_"] = (
                 city_data[f"{variable}_mean"] - city_data[f"{variable}_std"]
             )
 
-    
+            #plot yearly mean values
             city_data.groupby("year")["mid_"].apply("mean").plot(
                 ax=axs[i], label=f"{city}", color=f"C{k}"
             )
@@ -165,14 +157,36 @@ def plot_timeseries(data: pd.DataFrame):
         fancybox=True,
         shadow=True,
         ncol=5,
-    )  
+    )
+
     plt.savefig(
-        "src/module1/clima.png", bbox_inches="tight"
+        "/home/hasierza/zrive-ds/src/module_1/clima.png", bbox_inches="tight"
     )      
 
 
 def main():
-    #no he conseguido que me funcionara, he copiado el codigo de Guille y tengo algun error e intentado solucioanar pero no he conseguido
+    
+    """""
+    #esto lo he hecho para ver si con una ciudad funcionaba.
+    data_list = []
+    start_date = "2015-01-01"
+    end_date = "2025-12-05"
+    time_spam = pd.date_range(start_date, end_date, freq="D").strftime("%Y-%m-%d").tolist()
+    longitude = -3.703790
+    latitude = 40.416775
+    city = "Madrid"
+
+
+    for k in range(len(time_spam) - 1):
+        partial_start = time_spam[k]
+        partial_end = time_spam[k + 1]
+        #print("Partial start:", partial_start)
+        #print("Partial end:", partial_end)
+        data_list.append(
+            (pd.DataFrame(get_data_meteo_api(longitude, latitude, partial_start, partial_end)["daily"]).assign(city=city))
+        )  
+        print("hemos llegado al bucle: ", k)  
+    """
     data_list = []
     start_date = "1950-01-01"
     end_date = "2050-12-31"
